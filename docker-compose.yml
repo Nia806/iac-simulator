@@ -1,0 +1,52 @@
+version: '3.8'
+
+# IaC Simulator - Docker Compose Configuration
+# Simple infrastructure setup with Nginx web server and PostgreSQL database
+
+services:
+  # Web server - serves static dashboard
+  nginx:
+    image: nginx:alpine
+    container_name: iac-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      # Mount frontend folder to nginx html directory
+      - ./frontend:/usr/share/nginx/html:ro
+    networks:
+      - iac-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Database server - PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: iac-postgres
+    environment:
+      POSTGRES_PASSWORD: example
+      POSTGRES_USER: postgres
+      POSTGRES_DB: iac_simulator
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persist database data
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - iac-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+# Define custom network for service communication
+networks:
+  iac-network:
+    driver: bridge
+
+# Define volumes for data persistence
+volumes:
+  postgres_data:
