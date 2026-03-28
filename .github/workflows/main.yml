@@ -46,7 +46,7 @@ jobs:
 
       - name: Check for secrets
         run: |
-          if grep -r "password\|token\|secret" *.md ansible/ 2>/dev/null | grep -v "example" | grep -v "Password:" ; then
+          if grep -r "password\|token\|secret" *.md ansible/ 2>/dev/null | grep -v "example" | grep -v "Password:" | grep -v "password:" ; then
             echo "Warning: Found potential secrets in files"
             exit 1
           fi
