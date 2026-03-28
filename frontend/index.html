@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IaC Simulator — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --border: #1e2229;
+    --border-bright: #2a3040;
+    --text: #e2e8f0;
+    --muted: #4a5568;
+    --dim: #2d3748;
+    --green: #00ff88;
+    --green-dim: #00ff8822;
+    --green-mid: #00c46a;
+    --amber: #ffb347;
+    --amber-dim: #ffb34722;
+    --red: #ff4d6d;
+    --red-dim: #ff4d6d22;
+    --blue: #5eaeff;
+    --blue-dim: #5eaeff18;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,12,16,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--green);
+  }
+
+  .logo-icon {
+    width: 26px;
+    height: 26px;
+    border: 1.5px solid var(--green);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--green);
+    font-size: 11px;
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  .main {
+    position: relative;
+    z-index: 1;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Page header */
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .page-title span {
+    color: var(--green);
+  }
+
+  .page-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .apply-btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 9px 18px;
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.15s;
+  }
+
+  .apply-btn:hover {
+    background: var(--green-mid);
+    transform: translateY(-1px);
+  }
+
+  /* Stat row */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat-card.green::after { background: var(--green); }
+  .stat-card.amber::after { background: var(--amber); }
+  .stat-card.blue::after  { background: var(--blue); }
+  .stat-card.red::after   { background: var(--red); }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: 2px;
+  }
+
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.amber .stat-value { color: var(--amber); }
+  .stat-card.blue  .stat-value { color: var(--blue); }
+  .stat-card.red   .stat-value { color: var(--red); }
+
+  .stat-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Main grid */
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .card-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-amber { background: var(--amber-dim); color: var(--amber); }
+  .badge-red   { background: var(--red-dim);   color: var(--red); }
+  .badge-blue  { background: var(--blue-dim);  color: var(--blue); }
+
+  /* Service list */
+  .service-list {
+    padding: 8px 0;
+  }
+
+  .service-row {
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 20px 180px 1fr 80px 80px;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    transition: background 0.15s;
+  }
+
+  .service-row:last-child { border-bottom: none; }
+  .service-row:hover { background: var(--blue-dim); }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .dot-red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+
+  .svc-name { font-weight: 700; color: var(--text); font-size: 13px; }
+  .svc-image { color: var(--muted); font-size: 11px; }
+  .svc-port { color: var(--blue); }
+  .svc-uptime { color: var(--muted); font-size: 11px; text-align: right; }
+
+  /* CPU bar */
+  .cpu-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cpu-label { font-size: 10px; color: var(--muted); }
+  .cpu-bar {
+    height: 4px;
+    background: var(--dim);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .cpu-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s;
+  }
+  .fill-green { background: var(--green); }
+  .fill-amber { background: var(--amber); }
+
+  /* Terraform state panel */
+  .tf-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+
+  .tf-resource {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    transition: border-color 0.2s;
+  }
+
+  .tf-resource:hover { border-color: var(--border-bright); }
+
+  .tf-res-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .tf-res-name { font-weight: 700; color: var(--text); font-size: 12px; }
+  .tf-res-type { color: var(--muted); font-size: 10px; margin-top: 2px; }
+  .tf-res-id { color: var(--muted); font-size: 10px; font-family: var(--mono); margin-top: 4px; word-break: break-all; }
+
+  /* Log stream */
+  .log-body {
+    padding: 14px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.9;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .log-body::-webkit-scrollbar { width: 4px; }
+  .log-body::-webkit-scrollbar-track { background: transparent; }
+  .log-body::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+  .log-line { display: flex; gap: 12px; }
+  .log-time { color: var(--muted); flex-shrink: 0; }
+  .log-ok   { color: var(--green); }
+  .log-warn { color: var(--amber); }
+  .log-info { color: var(--blue); }
+  .log-err  { color: var(--red); }
+
+  /* Network topology row */
+  .net-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Ansible playbook panel */
+  .pb-body { padding: 14px 20px; font-family: var(--mono); font-size: 11px; }
+
+  .pb-task {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .pb-task:last-child { border-bottom: none; }
+  .pb-task.done { color: var(--text); }
+  .pb-task.running { color: var(--amber); }
+  .pb-task .tick { width: 14px; height: 14px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+  .tick-done { background: var(--green-dim); color: var(--green); }
+  .tick-running { background: var(--amber-dim); color: var(--amber); animation: pulse 1.2s infinite; }
+  .tick-wait { background: var(--dim); color: var(--muted); }
+
+  /* Responsive tweak */
+  @media (max-width: 900px) {
+    .grid-two { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .net-row { grid-template-columns: 1fr; }
+    .service-row { grid-template-columns: 20px 1fr 70px; }
+    .service-row .svc-image, .service-row .svc-uptime { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-icon">∑</div>
+    IAC-SIM
+  </div>
+  <div class="topbar-right">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+    <span>env: local-dev</span>
+    <span id="topbar-time">time: --:--:--</span>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Infrastructure <span>Simulator</span></div>
+      <div class="page-sub">$ terraform apply — completed 4 resources · docker network: sim-net · host: localhost</div>
+    </div>
+    <button class="apply-btn">▶ terraform apply</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stat-row">
+    <div class="stat-card green">
+      <div class="stat-label">containers up</div>
+      <div class="stat-value">3</div>
+      <div class="stat-sub">/ 3 running</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-label">tf resources</div>
+      <div class="stat-value">7</div>
+      <div class="stat-sub">no drift detected</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">network</div>
+      <div class="stat-value">1</div>
+      <div class="stat-sub">sim-net · bridge</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">ansible plays</div>
+      <div class="stat-value">5/5</div>
+      <div class="stat-sub">all tasks ok</div>
+    </div>
+  </div>
+
+  <!-- Services + Terraform state -->
+  <div class="grid-two">
+
+    <!-- Services -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Running containers</div>
+        <span class="card-badge badge-green">3 healthy</span>
+      </div>
+      <div class="service-list">
+
+        <!-- Header row -->
+        <div class="service-row" style="color:var(--muted);font-size:10px;padding:8px 20px;border-bottom:1px solid var(--border);cursor:default">
+          <div></div>
+          <div>NAME</div>
+          <div>IMAGE</div>
+          <div>PORT</div>
+          <div style="text-align:right">UPTIME</div>
+        </div>
+
+        <div class="service-row">
+          <div class="status-dot dot-green"></div>
+          <div class="svc-name">web-app</div>
+          <div class="svc-image">nginx:alpine</div>
+          <div class="svc-port">:8080</div>
+          <div class="svc-uptime">12m 34s</div>
+        </div>
+
+        <div class="service-row">
+          <div class="status-dot dot-green"></div>
+          <div class="svc-name">postgres-db</div>
+          <div class="svc-image">postgres:15</div>
+          <div class="svc-port">:5432</div>
+          <div class="svc-uptime">12m 31s</div>
+        </div>
+
+        <div class="service-row">
+          <div class="status-dot dot-amber"></div>
+          <div class="svc-name">redis-cache</div>
+          <div class="svc-image">redis:7-alpine</div>
+          <div class="svc-port">:6379</div>
+          <div class="svc-uptime">11m 02s</div>
+        </div>
+
+      </div>
+
+      <!-- CPU mini bars -->
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px;">
+        <div class="card-title" style="margin-bottom:4px">Resource usage</div>
+
+        <div style="display:grid;grid-template-columns:110px 1fr 40px;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;">
+          <div style="color:var(--muted)">web-app</div>
+          <div class="cpu-bar"><div class="cpu-fill fill-green" style="width:18%"></div></div>
+          <div style="color:var(--green)">18%</div>
+        </div>
+        <div style="display:grid;grid-template-columns:110px 1fr 40px;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;">
+          <div style="color:var(--muted)">postgres-db</div>
+          <div class="cpu-bar"><div class="cpu-fill fill-amber" style="width:42%"></div></div>
+          <div style="color:var(--amber)">42%</div>
+        </div>
+        <div style="display:grid;grid-template-columns:110px 1fr 40px;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;">
+          <div style="color:var(--muted)">redis-cache</div>
+          <div class="cpu-bar"><div class="cpu-fill fill-green" style="width:7%"></div></div>
+          <div style="color:var(--green)">7%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terraform state -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Terraform state</div>
+        <span class="card-badge badge-amber">7 resources</span>
+      </div>
+      <div class="tf-body">
+
+        <div class="tf-resource">
+          <div class="tf-res-top">
+            <div class="tf-res-name">docker_network.sim_net</div>
+            <span class="card-badge badge-green">applied</span>
+          </div>
+          <div class="tf-res-type">resource · docker · bridge</div>
+          <div class="tf-res-id">id: 7a3f9c1b2e4d</div>
+        </div>
+
+        <div class="tf-resource">
+          <div class="tf-res-top">
+            <div class="tf-res-name">docker_container.web_app</div>
+            <span class="card-badge badge-green">applied</span>
+          </div>
+          <div class="tf-res-type">resource · docker · container</div>
+          <div class="tf-res-id">id: c8f1a2b9d5e3</div>
+        </div>
+
+        <div class="tf-resource">
+          <div class="tf-res-top">
+            <div class="tf-res-name">docker_container.postgres</div>
+            <span class="card-badge badge-green">applied</span>
+          </div>
+          <div class="tf-res-type">resource · docker · container</div>
+          <div class="tf-res-id">id: e2d4f6a8b0c1</div>
+        </div>
+
+        <div class="tf-resource">
+          <div class="tf-res-top">
+            <div class="tf-res-name">docker_volume.pg_data</div>
+            <span class="card-badge badge-blue">no-op</span>
+          </div>
+          <div class="tf-res-type">resource · docker · volume</div>
+          <div class="tf-res-id">id: pg_data_vol</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row: logs + ansible -->
+  <div class="net-row">
+
+    <!-- Log stream -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Live log stream</div>
+        <span class="card-badge badge-blue">tail -f</span>
+      </div>
+      <div class="log-body">
+        <div class="log-line"><span class="log-time">09:14:02</span><span class="log-ok">✓ terraform apply complete. 4 added, 0 changed, 0 destroyed.</span></div>
+        <div class="log-line"><span class="log-time">09:14:05</span><span class="log-info">→ ansible-playbook site.yml starting...</span></div>
+        <div class="log-line"><span class="log-time">09:14:06</span><span class="log-ok">✓ [web-app] nginx config pushed</span></div>
+        <div class="log-line"><span class="log-time">09:14:07</span><span class="log-ok">✓ [postgres] DB seeded: sim_db</span></div>
+        <div class="log-line"><span class="log-time">09:14:09</span><span class="log-warn">⚠ [redis] memory limit not set — using default</span></div>
+        <div class="log-line"><span class="log-time">09:14:10</span><span class="log-ok">✓ health check PASSED: web-app → HTTP 200</span></div>
+        <div class="log-line"><span class="log-time">09:14:11</span><span class="log-ok">✓ health check PASSED: postgres → accepting connections</span></div>
+        <div class="log-line"><span class="log-time">09:14:12</span><span class="log-info">→ environment ready. sim-net online.</span></div>
+      </div>
+    </div>
+
+    <!-- Ansible playbook status -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Ansible playbook</div>
+        <span class="card-badge badge-green">5/5 ok</span>
+      </div>
+      <div class="pb-body">
+        <div class="pb-task done">
+          <div class="tick tick-done">✓</div>
+          Install nginx on web-app container
+        </div>
+        <div class="pb-task done">
+          <div class="tick tick-done">✓</div>
+          Push nginx.conf template
+        </div>
+        <div class="pb-task done">
+          <div class="tick tick-done">✓</div>
+          Inject env vars (DB_HOST, DB_PASS)
+        </div>
+        <div class="pb-task done">
+          <div class="tick tick-done">✓</div>
+          Seed postgres with init.sql
+        </div>
+        <div class="pb-task done">
+          <div class="tick tick-done">✓</div>
+          Run health-check assertions
+        </div>
+      </div>
+
+      <!-- GitHub Actions status -->
+      <div style="margin:0 14px 14px;border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:11px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.1em">GitHub Actions</span>
+          <span class="card-badge badge-green">passed</span>
+        </div>
+        <div style="color:var(--muted)">main.yml · push → main</div>
+        <div style="color:var(--text);margin-top:4px;">terraform apply + ansible + smoke test</div>
+        <div style="color:var(--muted);font-size:10px;margin-top:4px;">run #14 · 2m 11s</div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// Dynamic dashboard updater
+const CONTAINER_DATA = {
+  'iac-nginx': { name: 'web-app', image: 'nginx:alpine', port: 8080, startTime: Date.now() - 754000 },
+  'iac-postgres': { name: 'postgres-db', image: 'postgres:15', port: 5432, startTime: Date.now() - 751000 },
+  'iac-redis': { name: 'redis-cache', image: 'redis:7-alpine', port: 6379, startTime: Date.now() - 662000 }
+};
+
+const CPU_USAGE = {
+  'web-app': { current: 18, variants: [15, 18, 22, 19] },
+  'postgres-db': { current: 42, variants: [38, 42, 45, 40] },
+  'redis-cache': { current: 7, variants: [5, 7, 9, 6] }
+};
+
+const LOG_EVENTS = [
+  { time: '09:14:02', type: 'ok', msg: '✓ terraform apply complete. 4 added, 0 changed, 0 destroyed.' },
+  { time: '09:14:05', type: 'info', msg: '→ ansible-playbook site.yml starting...' },
+  { time: '09:14:06', type: 'ok', msg: '✓ [web-app] nginx config pushed' },
+  { time: '09:14:07', type: 'ok', msg: '✓ [postgres] DB seeded: sim_db' },
+  { time: '09:14:09', type: 'warn', msg: '⚠ [redis] health check active' },
+  { time: '09:14:10', type: 'ok', msg: '✓ health check PASSED: web-app → HTTP 200' },
+  { time: '09:14:11', type: 'ok', msg: '✓ health check PASSED: postgres → accepting connections' },
+];
+
+let containerStatuses = { 'iac-nginx': 'running', 'iac-postgres': 'running', 'iac-redis': 'running' };
+let uptimes = {};
+
+function getStatusDot(name) {
+  const status = containerStatuses[name];
+  if (status === 'running') return 'dot-green';
+  if (status === 'stopping') return 'dot-amber';
+  return 'dot-red';
+}
+
+function getStatusBadgeClass(name) {
+  const status = containerStatuses[name];
+  if (status === 'running') return 'badge-green';
+  if (status === 'stopping') return 'badge-amber';
+  return 'badge-red';
+}
+
+function getStatusText(name) {
+  const status = containerStatuses[name];
+  return status === 'running' ? 'healthy' : status;
+}
+
+function updateUptime(containerName) {
+  const startTime = CONTAINER_DATA[containerName].startTime;
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  uptimes[containerName] = `${minutes}m ${seconds}s`;
+  return uptimes[containerName];
+}
+
+function updateServiceRows() {
+  const containers = ['iac-nginx', 'iac-postgres', 'iac-redis'];
+  let healthyCount = 0;
+
+  containers.forEach((containerId, index) => {
+    const data = CONTAINER_DATA[containerId];
+    const status = containerStatuses[containerId];
+    const row = document.querySelectorAll('.service-row')[index + 1]; // Skip header row
+    
+    if (row) {
+      const uptime = updateUptime(containerId);
+      
+      // Update status dot
+      const dot = row.querySelector('.status-dot');
+      dot.className = `status-dot ${getStatusDot(containerId)}`;
+
+      // Update uptime
+      const uptimeEl = row.querySelector('.svc-uptime');
+      if (uptimeEl) uptimeEl.textContent = uptime;
+
+      if (status === 'running') healthyCount++;
+    }
+  });
+
+  // Update badge
+  const badge = document.querySelector('.card-badge.badge-green');
+  if (badge) badge.textContent = `${healthyCount} healthy`;
+}
+
+function updateCPUBars() {
+  const services = ['web-app', 'postgres-db', 'redis-cache'];
+  
+  services.forEach((service, idx) => {
+    const usage = CPU_USAGE[service];
+    usage.current = usage.variants[Math.floor(Math.random() * usage.variants.length)];
+    
+    const bars = document.querySelectorAll('.cpu-bar');
+    if (bars[idx]) {
+      const fill = bars[idx].querySelector('.cpu-fill');
+      fill.style.width = usage.current + '%';
+
+      const percentText = bars[idx].parentElement.querySelector('[style*="color:var"]');
+      if (percentText) percentText.textContent = usage.current + '%';
+    }
+  });
+}
+
+function addLogEntry(type, msg) {
+  const logBody = document.querySelector('.log-body');
+  const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const logLine = document.createElement('div');
+  logLine.className = 'log-line';
+  logLine.innerHTML = `<span class="log-time">${time}</span><span class="log-${type}">${msg}</span>`;
+  
+  logBody.appendChild(logLine);
+  logBody.scrollTop = logBody.scrollHeight;
+
+  // Keep only last 10 entries
+  const lines = logBody.querySelectorAll('.log-line');
+  if (lines.length > 10) lines[0].remove();
+}
+
+function simulateEvents() {
+  const events = [
+    { type: 'ok', msg: '✓ Container health check passed' },
+    { type: 'info', msg: '→ Syncing Terraform state' },
+    { type: 'ok', msg: '✓ All services responding' },
+    { type: 'warn', msg: '⚠ High memory usage detected on postgres' },
+    { type: 'ok', msg: '✓ Network connectivity OK' }
+  ];
+  
+  const randomEvent = events[Math.floor(Math.random() * events.length)];
+  addLogEntry(randomEvent.type, randomEvent.msg);
+}
+
+function updateStats() {
+  const running = Object.values(containerStatuses).filter(s => s === 'running').length;
+  const statsCards = document.querySelectorAll('.stat-value');
+  if (statsCards[0]) statsCards[0].textContent = running;
+}
+
+function randomizeContainerStatus() {
+  // Simulate occasional status changes
+  if (Math.random() > 0.95) {
+    const containers = Object.keys(containerStatuses);
+    const randomContainer = containers[Math.floor(Math.random() * containers.length)];
+    
+    if (containerStatuses[randomContainer] === 'running') {
+      containerStatuses[randomContainer] = 'stopping';
+      setTimeout(() => {
+        containerStatuses[randomContainer] = 'running';
+      }, 2000);
+    }
+  }
+}
+
+function updateDashboard() {
+  updateServiceRows();
+  updateCPUBars();
+  updateStats();
+  randomizeContainerStatus();
+  
+  if (Math.random() > 0.7) {
+    simulateEvents();
+  }
+}
+
+// Initial update
+updateDashboard();
+
+// Real-time updates every 2 seconds
+setInterval(updateDashboard, 2000);
+
+// Update timestamp in topbar
+setInterval(() => {
+  const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const timeSpan = document.getElementById('topbar-time');
+  if (timeSpan) timeSpan.textContent = `time: ${now}`;
+}, 1000);
+</script>
+
+</body>
+</html>
