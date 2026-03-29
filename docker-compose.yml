@@ -9,7 +9,7 @@ services:
     image: nginx:alpine
     container_name: iac-nginx
     ports:
-      - "8080:80"
+      - "8081:80"
     volumes:
       # Mount frontend folder to nginx html directory
       - ./frontend:/usr/share/nginx/html:ro
