@@ -10,7 +10,7 @@ echo ""
 
 # Test Nginx
 echo "Testing Nginx..."
-RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null http://localhost:8080)
+RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null http://localhost:8081)
 
 if [ "$RESPONSE" = "200" ]; then
     echo "Nginx is running (HTTP $RESPONSE)"

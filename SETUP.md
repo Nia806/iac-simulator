@@ -61,7 +61,7 @@ Open **PowerShell as Administrator** and run:
 ```powershell
 pip install ansible
 ```
-
+ppip install 
 Or if pip is not found:
 
 ```powershell
@@ -176,7 +176,7 @@ All services are verified!
 Open your web browser and go to:
 
 ```
-http://localhost:8080
+http://localhost:8081
 ```
 
 **You should see:**

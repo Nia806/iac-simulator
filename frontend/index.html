@@ -514,7 +514,7 @@
   <div class="service-check-list">
     <div class="service-check checking" id="check-nginx">
       <div class="check-dot checking"></div>
-      <span>Nginx (8080)</span>
+      <span>Nginx (8081)</span>
     </div>
     <div class="service-check" id="check-postgres">
       <div class="check-dot waiting"></div>
@@ -602,7 +602,7 @@
           <div class="status-dot dot-green"></div>
           <div class="svc-name">web-app</div>
           <div class="svc-image">nginx:alpine</div>
-          <div class="svc-port">:8080</div>
+          <div class="svc-port">:8081</div>
           <div class="svc-uptime">12m 34s</div>
         </div>
 
@@ -764,7 +764,7 @@
 // Service availability checker
 async function checkServiceAvailability() {
   const services = {
-    'nginx': { url: 'http://localhost:8080', timeout: 3000, checkEl: 'check-nginx' },
+    'nginx': { url: 'http://localhost:8081', timeout: 3000, checkEl: 'check-nginx' },
     'postgres': { port: 5432, checkEl: 'check-postgres' },
     'redis': { port: 6379, checkEl: 'check-redis' }
   };
@@ -855,7 +855,7 @@ async function initializeDashboard() {
 function startDashboardUpdates() {
   // Dynamic dashboard updater
   const CONTAINER_DATA = {
-    'iac-nginx': { name: 'web-app', image: 'nginx:alpine', port: 8080, startTime: Date.now() - 754000 },
+    'iac-nginx': { name: 'web-app', image: 'nginx:alpine', port: 8081, startTime: Date.now() - 754000 },
     'iac-postgres': { name: 'postgres-db', image: 'postgres:15', port: 5432, startTime: Date.now() - 751000 },
     'iac-redis': { name: 'redis-cache', image: 'redis:7-alpine', port: 6379, startTime: Date.now() - 662000 }
   };
