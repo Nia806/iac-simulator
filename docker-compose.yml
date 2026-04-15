@@ -56,6 +56,31 @@ services:
       timeout: 5s
       retries: 3
 
+  # Backend API service - provides real container metrics
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: iac-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    depends_on:
+      - nginx
+      - postgres
+      - redis
+    networks:
+      - iac-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
 # Define custom network for service communication
 networks:
   iac-network:
